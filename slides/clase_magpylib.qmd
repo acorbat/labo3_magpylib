@@ -5,6 +5,7 @@ author: "Laboratorio de Electricidad y Magnetismo"
 format:
   revealjs:
     theme: simple
+    css: custom.css
     slide-number: true
     transition: fade
     embed-resources: true
@@ -60,13 +61,9 @@ plt.style.use('seaborn-v0_8-whitegrid')
 print('Magpylib versión:', magpy.__version__)
 ```
 
-## Idea 1: bobina simplificada con `Collection`
+## Bobina simplificada con `Collection`
 
-Para modelar una bobina, aprovechamos la clase **`Collection`** para juntar varias fuentes de corriente por superposición.
-
-La aproximación más simple consiste en representar la bobina como varias **espiras circulares** iguales, distribuidas a lo largo del eje `z`.
-
-## Construcción de la bobina simplificada
+La aproximación más simple consiste en representar la bobina como varias **espiras circulares** iguales distribuidas sobre el eje `z`.
 
 ```{python}
 corriente = 10.0   # A
@@ -88,17 +85,9 @@ print('Objeto creado:', bobina_simple)
 print('Cantidad de espiras:', len(bobina_simple.children))
 ```
 
-## Idea 2: modelo más preciso con `Polyline`
+## Bobina más precisa con `Polyline`
 
-También podemos representar el conductor como una **hélice**.
-
-Este modelo:
-
-- puede ser más realista,
-- es más costoso computacionalmente,
-- y depende de cómo discretizamos la curva.
-
-## Construcción de la bobina helicoidal
+Ahora representamos el conductor como una **hélice**.
 
 ```{python}
 t = np.linspace(0, n_espiras*2*np.pi, 1200)
@@ -120,7 +109,7 @@ print('Objeto creado:', bobina_helicoidal)
 print('Cantidad de vértices usados:', len(vertices))
 ```
 
-## Comparación visual en el plano `xz`
+## Preparar una grilla para comparar ambos modelos
 
 ```{python}
 xs = np.linspace(-0.02, 0.02, 41)
@@ -138,7 +127,12 @@ Bamp_helice_norm = Bamp_helice / Bamp_helice.max()
 
 X_mm = grid[:, :, 0] * 1000
 Z_mm = grid[:, :, 2] * 1000
+```
 
+## Comparación visual en el plano `xz`
+
+```{python}
+#| echo: false
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 5))
 
 sp = ax1.streamplot(
@@ -150,11 +144,7 @@ sp = ax1.streamplot(
     cmap='coolwarm',
 )
 
-cf = ax2.contourf(
-    X_mm, Z_mm, Bamp_helice_norm,
-    levels=40,
-    cmap='coolwarm',
-)
+cf = ax2.contourf(X_mm, Z_mm, Bamp_helice_norm, levels=40, cmap='coolwarm')
 ax2.streamplot(
     X_mm, Z_mm,
     B_helice[:, :, 0], B_helice[:, :, 2],
@@ -180,7 +170,12 @@ puntos_eje = np.c_[np.zeros_like(z_eje), np.zeros_like(z_eje), z_eje]
 
 Bz_simple = magpy.getB(bobina_simple, puntos_eje)[:, 2]
 Bz_helice = magpy.getB(bobina_helicoidal, puntos_eje)[:, 2]
+```
 
+## Perfil axial `Bz(z)`
+
+```{python}
+#| echo: false
 plt.figure(figsize=(7, 4))
 plt.plot(z_eje*1000, Bz_simple*1000, label='Modelo simplificado', lw=2)
 plt.plot(z_eje*1000, Bz_helice*1000, label='Modelo helicoidal', lw=2, ls='--')
@@ -191,7 +186,7 @@ plt.legend()
 plt.show()
 ```
 
-## Medición en puntos sobre el eje
+## Medición en puntos sobre el eje {.smaller}
 
 ```{python}
 puntos_medicion = np.array([
@@ -224,8 +219,6 @@ tabla
 
 ## Ejemplo extra: imán cilíndrico
 
-Esto puede quedar para mostrar rápidamente en clase o para explorar en casa.
-
 ```{python}
 iman = magpy.magnet.Cylinder(
     polarization=(0, 0, 1.2),
@@ -244,7 +237,12 @@ print('Posición [m]:', iman.position)
 z_iman = np.linspace(0.005, 0.12, 200)
 puntos_iman = np.c_[np.zeros_like(z_iman), np.zeros_like(z_iman), z_iman]
 B_iman = magpy.getB(iman, puntos_iman)
+```
 
+## Perfil axial del imán
+
+```{python}
+#| echo: false
 plt.figure(figsize=(7,4))
 plt.plot(z_iman*100, B_iman[:, 2]*1000, lw=2)
 plt.xlabel('z [cm]')
@@ -256,6 +254,7 @@ plt.show()
 ## Mapa de campo del imán
 
 ```{python}
+#| echo: false
 xs = np.linspace(-0.08, 0.08, 81)
 zs = np.linspace(-0.08, 0.08, 81)
 grid_iman = np.array([[(x, 0, z) for x in xs] for z in zs])

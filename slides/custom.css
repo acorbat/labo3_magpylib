@@ -1,0 +1,12 @@
+.reveal .slides section {
+  overflow-y: auto;
+}
+
+.reveal pre code {
+  max-height: 480px;
+  font-size: 0.72em;
+}
+
+.reveal .slides section.smaller {
+  font-size: 0.9em;
+}
