@@ -1,0 +1,163 @@
+---
+title: "Introducción a Magpylib"
+subtitle: "Laboratorio de Electricidad y Magnetismo"
+author: "Material actualizado para clase"
+format:
+  revealjs:
+    theme: simple
+    slide-number: true
+    transition: fade
+    embed-resources: true
+execute:
+  echo: true
+  warning: false
+  message: false
+jupyter: python3
+---
+
+## Objetivos de la clase
+
+- Entender qué hace **Magpylib**.
+- Simular fuentes magnéticas simples.
+- Medir el campo en puntos del espacio.
+- Visualizar perfiles y mapas de campo.
+- Preparar una base para comparar con datos experimentales.
+
+## Cambio importante respecto de materiales viejos
+
+En **Magpylib 5** conviene trabajar en **SI**:
+
+- longitud en **m**
+- corriente en **A**
+- campo en **T**
+
+Para laboratorio, en los gráficos mostraremos a menudo:
+
+- distancia en **cm**
+- campo en **mT**
+
+## Entorno recomendado
+
+- Local: `pixi install`
+- Notebook: `pixi run lab`
+- Diapositivas: `pixi run render-slides`
+- Colab: subir el notebook y ejecutar en orden
+
+## Imports y clase auxiliar
+
+```{python}
+from pathlib import Path
+import sys
+
+import magpylib as magpy
+import matplotlib.pyplot as plt
+import numpy as np
+
+for candidato in [Path('src').resolve(), Path('../src').resolve()]:
+    if candidato.exists() and str(candidato) not in sys.path:
+        sys.path.insert(0, str(candidato))
+
+from labo3_magpylib import SimulacionCampoMagnetico
+
+plt.style.use('seaborn-v0_8-whitegrid')
+print('Magpylib:', magpy.__version__)
+```
+
+## Caso 1: imán cilíndrico
+
+```{python}
+iman = SimulacionCampoMagnetico.iman_cilindrico(
+    polarizacion=(0, 0, 1.2),
+    dimension=(0.015, 0.005),
+    nombre='Imán cilíndrico'
+)
+
+ax, tabla = iman.graficar_perfil_eje(
+    eje='z',
+    componente='Bz [mT]',
+    rango=(0.005, 0.12),
+    unidad_longitud='cm',
+    unidad_campo='mT'
+)
+plt.show()
+```
+
+## Medición en puntos concretos
+
+```{python}
+iman.medir_en_puntos(
+    [(0, 0, 0.01), (0, 0, 0.03), (0.01, 0, 0.03)],
+    etiquetas=['A', 'B', 'C'],
+    unidad_longitud='cm',
+    unidad_campo='mT'
+)
+```
+
+## Qué mirar en este ejemplo
+
+- Simetría del problema sobre el eje.
+- Diferencia entre `Bz` y `|B|`.
+- Cómo cambia la intensidad al alejarse del imán.
+- Influencia de la geometría del imán.
+
+## Caso 2: solenoide discreto
+
+```{python}
+solenoide = SimulacionCampoMagnetico.solenoide_discreto(
+    corriente=2.0,
+    radio=0.015,
+    largo=0.05,
+    espiras=25,
+    nombre='Solenoide discreto'
+)
+
+ax, mapa = solenoide.graficar_mapa(
+    plano='xz',
+    rango1=(-0.05, 0.05),
+    rango2=(-0.05, 0.05),
+    n1=90,
+    n2=90,
+    unidad_longitud='cm',
+    unidad_campo='mT',
+    mostrar_vectores=True,
+)
+plt.show()
+```
+
+## Perfil axial del solenoide
+
+```{python}
+ax, tabla_sol = solenoide.graficar_perfil_eje(
+    eje='z',
+    componente='Bz [mT]',
+    rango=(-0.08, 0.08),
+    unidad_longitud='cm',
+    unidad_campo='mT'
+)
+plt.show()
+```
+
+## Preguntas para discutir
+
+1. ¿Dónde esperan el campo más uniforme dentro del solenoide?
+2. ¿Qué cambia si aumentamos la corriente?
+3. ¿Qué cambia si aumentamos el número de espiras?
+4. ¿Qué limitaciones tiene este modelo?
+
+## Para seguir trabajando
+
+- Comparar simulación con mediciones reales.
+- Explorar otras geometrías de imanes.
+- Ajustar leyes de potencia lejos de la fuente.
+- Construir sensores virtuales y barridos automáticos.
+
+## Material del repositorio
+
+- `src/labo3_magpylib/simulacion_campo_magnetico.py`
+- `notebooks/01_introduccion_magpylib.ipynb`
+- `slides/clase_magpylib.qmd`
+- `README.md`
+
+## Fin
+
+La idea no es memorizar la API, sino usar la simulación para pensar mejor la física del campo magnético.

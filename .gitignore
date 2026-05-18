@@ -1,0 +1,7 @@
+.pixi/
+.ipynb_checkpoints/
+__pycache__/
+*.pyc
+*.html
+.quarto/
+.vscode/
