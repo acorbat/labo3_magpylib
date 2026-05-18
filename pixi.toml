@@ -7,7 +7,6 @@ version = "0.1.0"
 
 [tasks]
 lab = "jupyter lab"
-generar-notebook = "python scripts/generar_notebook.py"
 render-slides = "quarto render slides/clase_magpylib.qmd"
 chequear = "python scripts/chequear_materiales.py"
 

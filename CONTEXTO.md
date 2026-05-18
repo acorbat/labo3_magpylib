@@ -14,12 +14,13 @@ Se busca que los alumnos puedan:
 - Se usa **Magpylib 5**.
 - Se gestiona el entorno con **Pixi**.
 - Se incluye un **notebook ejecutable en Google Colab**.
-- Se incorpora una **clase simplificada** en `src/` para ocultar detalles repetitivos de Magpylib.
+- El notebook principal quedó **auto-contenido**, sin depender de importar clases auxiliares externas.
 - Se agregan **diapositivas en Quarto** para clase.
 
 ## Casos incluidos
-1. **Imán cilíndrico**: perfil del campo sobre el eje y medición en puntos.
-2. **Solenoide discreto**: mapa del campo en un plano y comparación cualitativa con lo esperado.
+1. **Bobina simplificada con `Collection`**: superposición de espiras circulares.
+2. **Bobina helicoidal con `Polyline`**: modelo más detallado del conductor.
+3. **Imán cilíndrico**: ejemplo adicional para explorar fuera de clase.
 
 ## Estado esperado
 Al finalizar, el proyecto debe quedar listo para:

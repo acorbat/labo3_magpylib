@@ -3,8 +3,8 @@
 Material docente para una clase introductoria de **Magpylib** orientada a estudiantes del Laboratorio de Electricidad y Magnetismo.
 
 ## Contenido
-- `src/labo3_magpylib/`: clase simplificada para trabajar con Magpylib.
-- `notebooks/01_introduccion_magpylib.ipynb`: notebook para alumnos.
+- `src/labo3_magpylib/`: utilidades Python reutilizables para Magpylib.
+- `notebooks/01_introduccion_magpylib.ipynb`: notebook principal para alumnos, auto-contenido y compatible con Colab.
 - `slides/clase_magpylib.qmd`: diapositivas para clase en Quarto.
 - `PLAN_DE_TRABAJO.md`: hoja de ruta del proyecto.
 - `CONTEXTO.md`: resumen ejecutivo.
@@ -21,7 +21,6 @@ pixi run lab
 
 ## Tareas útiles
 ```bash
-pixi run generar-notebook
 pixi run render-slides
 pixi run chequear
 ```
