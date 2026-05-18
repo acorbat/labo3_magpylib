@@ -6,9 +6,10 @@ platforms = ["win-64"]
 version = "0.1.0"
 
 [tasks]
-lab = "jupyter lab"
-render-slides = "quarto render slides/clase_magpylib.qmd"
 chequear = "python scripts/chequear_materiales.py"
+lab = { cmd = "jupyter lab notebooks/01_introduccion_magpylib.ipynb", depends-on = ["chequear"] }
+notebook = { cmd = "jupyter notebook notebooks/01_introduccion_magpylib.ipynb", depends-on = ["chequear"] }
+render-slides = { cmd = "quarto render slides/clase_magpylib.qmd", depends-on = ["chequear"] }
 
 [dependencies]
 python = "3.11.*"
