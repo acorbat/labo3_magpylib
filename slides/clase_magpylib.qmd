@@ -1,7 +1,7 @@
 ---
 title: "Introducción a Magpylib"
-subtitle: "Laboratorio de Electricidad y Magnetismo"
-author: "Material actualizado para clase"
+subtitle: "Modelos simples de una bobina"
+author: "Laboratorio de Electricidad y Magnetismo"
 format:
   revealjs:
     theme: simple
@@ -17,13 +17,13 @@ jupyter: python3
 
 ## Objetivos de la clase
 
-- Entender qué hace **Magpylib**.
-- Simular fuentes magnéticas simples.
-- Medir el campo en puntos del espacio.
-- Visualizar perfiles y mapas de campo.
-- Preparar una base para comparar con datos experimentales.
+- Usar **Magpylib** en problemas simples de magnetostática.
+- Construir una **bobina** de dos maneras distintas.
+- Comparar un modelo **simplificado** con uno **más detallado**.
+- Visualizar el campo en mapas 2D y sobre el eje.
+- Dejar un ejemplo extra con un **imán cilíndrico**.
 
-## Cambio importante respecto de materiales viejos
+## Unidades y cambios respecto de materiales viejos
 
 En **Magpylib 5** conviene trabajar en **SI**:
 
@@ -31,10 +31,15 @@ En **Magpylib 5** conviene trabajar en **SI**:
 - corriente en **A**
 - campo en **T**
 
-Para laboratorio, en los gráficos mostraremos a menudo:
+En los gráficos mostraremos a menudo:
 
-- distancia en **cm**
+- distancia en **mm** o **cm**
 - campo en **mT**
+
+Además:
+
+- `magpy.current.Loop` → `magpy.current.Circle`
+- `magpy.current.Line` → `magpy.current.Polyline`
 
 ## Entorno recomendado
 
@@ -43,121 +48,237 @@ Para laboratorio, en los gráficos mostraremos a menudo:
 - Diapositivas: `pixi run render-slides`
 - Colab: subir el notebook y ejecutar en orden
 
-## Imports y clase auxiliar
+## Imports
 
 ```{python}
-from pathlib import Path
-import sys
-
 import magpylib as magpy
 import matplotlib.pyplot as plt
 import numpy as np
-
-for candidato in [Path('src').resolve(), Path('../src').resolve()]:
-    if candidato.exists() and str(candidato) not in sys.path:
-        sys.path.insert(0, str(candidato))
-
-from labo3_magpylib import SimulacionCampoMagnetico
+import pandas as pd
 
 plt.style.use('seaborn-v0_8-whitegrid')
-print('Magpylib:', magpy.__version__)
+print('Magpylib versión:', magpy.__version__)
 ```
 
-## Caso 1: imán cilíndrico
+## Idea 1: bobina simplificada con `Collection`
+
+Para modelar una bobina, aprovechamos la clase **`Collection`** para juntar varias fuentes de corriente por superposición.
+
+La aproximación más simple consiste en representar la bobina como varias **espiras circulares** iguales, distribuidas a lo largo del eje `z`.
+
+## Construcción de la bobina simplificada
 
 ```{python}
-iman = SimulacionCampoMagnetico.iman_cilindrico(
-    polarizacion=(0, 0, 1.2),
+corriente = 10.0   # A
+diametro = 0.010  # m
+largo = 0.016     # m
+n_espiras = 16
+
+bobina_simple = magpy.Collection()
+
+for z in np.linspace(-largo/2, largo/2, n_espiras):
+    espira = magpy.current.Circle(
+        current=corriente,
+        diameter=diametro,
+        position=(0, 0, z),
+    )
+    bobina_simple.add(espira)
+
+print('Objeto creado:', bobina_simple)
+print('Cantidad de espiras:', len(bobina_simple.children))
+```
+
+## Idea 2: modelo más preciso con `Polyline`
+
+También podemos representar el conductor como una **hélice**.
+
+Este modelo:
+
+- puede ser más realista,
+- es más costoso computacionalmente,
+- y depende de cómo discretizamos la curva.
+
+## Construcción de la bobina helicoidal
+
+```{python}
+t = np.linspace(0, n_espiras*2*np.pi, 1200)
+radio = diametro/2
+z_helice = np.linspace(-largo/2, largo/2, t.size)
+
+vertices = np.c_[
+    radio*np.cos(t),
+    radio*np.sin(t),
+    z_helice,
+]
+
+bobina_helicoidal = magpy.current.Polyline(
+    current=corriente,
+    vertices=vertices,
+)
+
+print('Objeto creado:', bobina_helicoidal)
+print('Cantidad de vértices usados:', len(vertices))
+```
+
+## Comparación visual en el plano `xz`
+
+```{python}
+xs = np.linspace(-0.02, 0.02, 41)
+zs = np.linspace(-0.02, 0.02, 41)
+grid = np.array([[(x, 0, z) for x in xs] for z in zs])
+
+B_simple = magpy.getB(bobina_simple, grid)
+B_helice = magpy.getB(bobina_helicoidal, grid)
+
+Bamp_simple = np.linalg.norm(B_simple, axis=2)
+Bamp_helice = np.linalg.norm(B_helice, axis=2)
+
+Bamp_simple_norm = Bamp_simple / Bamp_simple.max()
+Bamp_helice_norm = Bamp_helice / Bamp_helice.max()
+
+X_mm = grid[:, :, 0] * 1000
+Z_mm = grid[:, :, 2] * 1000
+
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 5))
+
+sp = ax1.streamplot(
+    X_mm, Z_mm,
+    B_simple[:, :, 0], B_simple[:, :, 2],
+    density=1.8,
+    color=Bamp_simple_norm,
+    linewidth=1 + 2*np.sqrt(Bamp_simple_norm),
+    cmap='coolwarm',
+)
+
+cf = ax2.contourf(
+    X_mm, Z_mm, Bamp_helice_norm,
+    levels=40,
+    cmap='coolwarm',
+)
+ax2.streamplot(
+    X_mm, Z_mm,
+    B_helice[:, :, 0], B_helice[:, :, 2],
+    density=1.8,
+    color='black',
+    linewidth=0.8,
+)
+
+ax1.set(title='Bobina simplificada', xlabel='x [mm]', ylabel='z [mm]', aspect=1)
+ax2.set(title='Bobina helicoidal', xlabel='x [mm]', ylabel='z [mm]', aspect=1)
+
+plt.colorbar(sp.lines, ax=ax1, label='intensidad relativa')
+plt.colorbar(cf, ax=ax2, label='intensidad relativa')
+plt.tight_layout()
+plt.show()
+```
+
+## Campo sobre el eje de la bobina
+
+```{python}
+z_eje = np.linspace(-0.03, 0.03, 200)
+puntos_eje = np.c_[np.zeros_like(z_eje), np.zeros_like(z_eje), z_eje]
+
+Bz_simple = magpy.getB(bobina_simple, puntos_eje)[:, 2]
+Bz_helice = magpy.getB(bobina_helicoidal, puntos_eje)[:, 2]
+
+plt.figure(figsize=(7, 4))
+plt.plot(z_eje*1000, Bz_simple*1000, label='Modelo simplificado', lw=2)
+plt.plot(z_eje*1000, Bz_helice*1000, label='Modelo helicoidal', lw=2, ls='--')
+plt.xlabel('z [mm]')
+plt.ylabel('Bz [mT]')
+plt.title('Campo axial de la bobina')
+plt.legend()
+plt.show()
+```
+
+## Medición en puntos sobre el eje
+
+```{python}
+puntos_medicion = np.array([
+    (0.0, 0.0, -0.020),
+    (0.0, 0.0, -0.010),
+    (0.0, 0.0,  0.000),
+    (0.0, 0.0,  0.010),
+    (0.0, 0.0,  0.020),
+])
+
+B_simple_pts = magpy.getB(bobina_simple, puntos_medicion)
+B_helice_pts = magpy.getB(bobina_helicoidal, puntos_medicion)
+
+tabla = pd.DataFrame({
+    'z [mm]': puntos_medicion[:, 2]*1000,
+    'Bz simple [mT]': B_simple_pts[:, 2]*1000,
+    'Bz helicoidal [mT]': B_helice_pts[:, 2]*1000,
+})
+
+tabla
+```
+
+## Qué discutir con estos dos modelos
+
+1. ¿Cuándo alcanza un modelo simplificado?
+2. ¿Qué ganamos y qué perdemos con el modelo helicoidal?
+3. ¿Cómo cambia el campo si aumentamos la corriente?
+4. ¿Qué cambia si modificamos el número de espiras?
+5. ¿Qué efecto tiene usar más o menos vértices en la hélice?
+
+## Ejemplo extra: imán cilíndrico
+
+Esto puede quedar para mostrar rápidamente en clase o para explorar en casa.
+
+```{python}
+iman = magpy.magnet.Cylinder(
+    polarization=(0, 0, 1.2),
     dimension=(0.015, 0.005),
-    nombre='Imán cilíndrico'
 )
 
-ax, tabla = iman.graficar_perfil_eje(
-    eje='z',
-    componente='Bz [mT]',
-    rango=(0.005, 0.12),
-    unidad_longitud='cm',
-    unidad_campo='mT'
-)
+print('Objeto creado:', iman)
+print('Polarización [T]:', iman.polarization)
+print('Dimensiones [m]:', iman.dimension)
+print('Posición [m]:', iman.position)
+```
+
+## Campo del imán sobre su eje
+
+```{python}
+z_iman = np.linspace(0.005, 0.12, 200)
+puntos_iman = np.c_[np.zeros_like(z_iman), np.zeros_like(z_iman), z_iman]
+B_iman = magpy.getB(iman, puntos_iman)
+
+plt.figure(figsize=(7,4))
+plt.plot(z_iman*100, B_iman[:, 2]*1000, lw=2)
+plt.xlabel('z [cm]')
+plt.ylabel('Bz [mT]')
+plt.title('Campo sobre el eje de un imán cilíndrico')
 plt.show()
 ```
 
-## Medición en puntos concretos
+## Mapa de campo del imán
 
 ```{python}
-iman.medir_en_puntos(
-    [(0, 0, 0.01), (0, 0, 0.03), (0.01, 0, 0.03)],
-    etiquetas=['A', 'B', 'C'],
-    unidad_longitud='cm',
-    unidad_campo='mT'
-)
-```
+xs = np.linspace(-0.08, 0.08, 81)
+zs = np.linspace(-0.08, 0.08, 81)
+grid_iman = np.array([[(x, 0, z) for x in xs] for z in zs])
+B_iman_grid = magpy.getB(iman, grid_iman)
+B_iman_mod = np.linalg.norm(B_iman_grid, axis=2)
 
-## Qué mirar en este ejemplo
+X_cm = grid_iman[:, :, 0] * 100
+Z_cm = grid_iman[:, :, 2] * 100
 
-- Simetría del problema sobre el eje.
-- Diferencia entre `Bz` y `|B|`.
-- Cómo cambia la intensidad al alejarse del imán.
-- Influencia de la geometría del imán.
-
-## Caso 2: solenoide discreto
-
-```{python}
-solenoide = SimulacionCampoMagnetico.solenoide_discreto(
-    corriente=2.0,
-    radio=0.015,
-    largo=0.05,
-    espiras=25,
-    nombre='Solenoide discreto'
-)
-
-ax, mapa = solenoide.graficar_mapa(
-    plano='xz',
-    rango1=(-0.05, 0.05),
-    rango2=(-0.05, 0.05),
-    n1=90,
-    n2=90,
-    unidad_longitud='cm',
-    unidad_campo='mT',
-    mostrar_vectores=True,
-)
+plt.figure(figsize=(6, 5))
+plt.contourf(X_cm, Z_cm, B_iman_mod*1000, levels=40, cmap='viridis')
+plt.streamplot(X_cm, Z_cm, B_iman_grid[:, :, 0], B_iman_grid[:, :, 2], color='white', density=1.6, linewidth=0.8)
+plt.xlabel('x [cm]')
+plt.ylabel('z [cm]')
+plt.title('Mapa de |B| para un imán cilíndrico')
+plt.colorbar(label='|B| [mT]')
+plt.gca().set_aspect('equal')
 plt.show()
 ```
 
-## Perfil axial del solenoide
+## Cierre
 
-```{python}
-ax, tabla_sol = solenoide.graficar_perfil_eje(
-    eje='z',
-    componente='Bz [mT]',
-    rango=(-0.08, 0.08),
-    unidad_longitud='cm',
-    unidad_campo='mT'
-)
-plt.show()
-```
-
-## Preguntas para discutir
-
-1. ¿Dónde esperan el campo más uniforme dentro del solenoide?
-2. ¿Qué cambia si aumentamos la corriente?
-3. ¿Qué cambia si aumentamos el número de espiras?
-4. ¿Qué limitaciones tiene este modelo?
-
-## Para seguir trabajando
-
-- Comparar simulación con mediciones reales.
-- Explorar otras geometrías de imanes.
-- Ajustar leyes de potencia lejos de la fuente.
-- Construir sensores virtuales y barridos automáticos.
-
-## Material del repositorio
-
-- `src/labo3_magpylib/simulacion_campo_magnetico.py`
-- `notebooks/01_introduccion_magpylib.ipynb`
-- `slides/clase_magpylib.qmd`
-- `README.md`
-
-## Fin
-
-La idea no es memorizar la API, sino usar la simulación para pensar mejor la física del campo magnético.
+- `Collection` permite construir una bobina por superposición de espiras.
+- `Polyline` permite modelar una geometría más detallada.
+- Los dos enfoques sirven, pero responden a objetivos distintos.
+- La simulación no reemplaza la física: ayuda a pensarla mejor.
